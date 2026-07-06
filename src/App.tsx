@@ -338,7 +338,7 @@ export default function App() {
               {/* Navigation Tabs for Tablet & Desktop */}
               <div className="hidden md:flex items-center gap-1 bg-slate-100/80 dark:bg-neutral-900/60 p-1 rounded-xl">
                 <span className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-neutral-800 text-slate-900 dark:text-white shadow-sm select-none">
-                  ⌨️ Typeracer
+                  💼 Портфолио
                 </span>
                 <a
                   href="https://tulgat.vercel.app/"
@@ -346,7 +346,7 @@ export default function App() {
                   rel="noopener noreferrer"
                   className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white transition-all flex items-center gap-1 cursor-pointer"
                 >
-                  💼 Портфолио
+                  ⌨️ Typeracer
                 </a>
               </div>
             </div>
@@ -356,7 +356,7 @@ export default function App() {
               {/* Tabs for Mobile */}
               <div className="flex items-center gap-1 bg-slate-100/80 dark:bg-neutral-900/60 p-1 rounded-xl md:hidden w-full sm:w-auto">
                 <span className="flex-1 sm:flex-initial text-center px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-neutral-800 text-slate-900 dark:text-white shadow-sm select-none">
-                  ⌨️ Typeracer
+                  💼 Портфолио
                 </span>
                 <a
                   href="https://tulgat.vercel.app/"
@@ -364,7 +364,7 @@ export default function App() {
                   rel="noopener noreferrer"
                   className="flex-1 sm:flex-initial text-center px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white transition-all flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  💼 Портфолио
+                  ⌨️ Typeracer
                 </a>
               </div>
 
