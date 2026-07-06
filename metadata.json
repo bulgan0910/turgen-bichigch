@@ -1,0 +1,6 @@
+{
+  "name": "Typeracer",
+  "description": "Монгол хэл дээрх Typeracer тоглоом. Хурдан бичиж, лидерүүдийн самбарт байраа эзлээрэй.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

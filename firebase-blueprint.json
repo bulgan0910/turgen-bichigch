@@ -1,0 +1,35 @@
+{
+  "entities": {
+    "Score": {
+      "title": "Score",
+      "description": "A leaderboard score entry",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The player's name"
+        },
+        "wpm": {
+          "type": "number",
+          "description": "Words per minute"
+        },
+        "errorCount": {
+          "type": "number",
+          "description": "Number of typing errors"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the score was achieved"
+        }
+      },
+      "required": ["name", "wpm", "errorCount", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/typeracer_scores/{scoreId}": {
+      "schema": "Score",
+      "description": "Collection of typeracer scores for leaderboard"
+    }
+  }
+}

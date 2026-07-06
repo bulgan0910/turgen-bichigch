@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /typeracer_scores/{scoreId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasAll(['name', 'wpm', 'errorCount', 'createdAt'])
+                    && request.resource.data.keys().size() == 4
+                    && request.resource.data.name is string
+                    && request.resource.data.wpm is number
+                    && request.resource.data.errorCount is number
+                    && request.resource.data.createdAt is timestamp;
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,0 +1,15 @@
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+
+const firebaseConfig = {
+  projectId: "top-collector-fbcl8",
+  appId: "1:808960640306:web:7563b880f04f2767a8c32b",
+  apiKey: "AIzaSyAqwRtzxMgEL9YuA0XkcGQqixoJHFotBAs",
+  authDomain: "top-collector-fbcl8.firebaseapp.com",
+  firestoreDatabaseId: "ai-studio-typeracer-b4145b74-4b15-4148-a8d9-7f78c9404c46",
+  storageBucket: "top-collector-fbcl8.firebasestorage.app",
+  messagingSenderId: "808960640306"
+};
+
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
