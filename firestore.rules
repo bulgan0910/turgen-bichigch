@@ -1,15 +1,26 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
     match /typeracer_scores/{scoreId} {
       allow read: if true;
-      allow create: if request.resource.data.keys().hasAll(['name', 'wpm', 'errorCount', 'createdAt'])
-                    && request.resource.data.keys().size() == 4
-                    && request.resource.data.name is string
-                    && request.resource.data.wpm is number
-                    && request.resource.data.errorCount is number
-                    && request.resource.data.createdAt is timestamp;
+      allow create: if isValidScore(request.resource.data);
       allow update, delete: if false;
+    }
+
+    function isValidScore(data) {
+      return data.keys().hasAll(['name', 'wpm', 'errorCount', 'createdAt', 'avatar', 'language'])
+                    && data.keys().size() == 6
+                    && data.name is string && data.name.size() <= 100
+                    && data.wpm is number
+                    && data.errorCount is number
+                    && data.createdAt == request.time
+                    && data.avatar is string && (data.avatar == 'car' || data.avatar == 'rocket' || data.avatar == 'horse')
+                    && data.language is string && (data.language == 'mn' || data.language == 'en');
     }
   }
 }

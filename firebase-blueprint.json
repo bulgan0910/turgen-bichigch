@@ -21,9 +21,17 @@
           "type": "string",
           "format": "date-time",
           "description": "When the score was achieved"
+        },
+        "avatar": {
+          "type": "string",
+          "description": "The avatar selected"
+        },
+        "language": {
+          "type": "string",
+          "description": "Selected language code (mn or en)"
         }
       },
-      "required": ["name", "wpm", "errorCount", "createdAt"]
+      "required": ["name", "wpm", "errorCount", "createdAt", "avatar", "language"]
     }
   },
   "firestore": {

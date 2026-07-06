@@ -319,40 +319,75 @@ export default function App() {
         
         {/* Navigation / Header */}
         <header className="border-b border-slate-200/60 dark:border-neutral-800/80 bg-white/75 dark:bg-neutral-950/75 backdrop-blur-md sticky top-0 z-50">
-          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500 text-black font-black font-display text-xl shadow-md shadow-emerald-500/20 flex items-center justify-center">
-                TR
+          <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500 text-black font-black font-display text-xl shadow-md shadow-emerald-500/20 flex items-center justify-center">
+                  TR
+                </div>
+                <div>
+                  <h1 className="font-display font-extrabold text-lg sm:text-xl text-slate-950 dark:text-white leading-none">
+                    Typeracer
+                  </h1>
+                  <p className="text-[10px] text-slate-400 dark:text-neutral-500 mt-1 uppercase tracking-wider font-semibold">
+                    Монгол Хэлний Бичгийн Хурдны Тэмцээн
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="font-display font-extrabold text-lg sm:text-xl text-slate-950 dark:text-white leading-none">
-                  Typeracer
-                </h1>
-                <p className="text-[10px] text-slate-400 dark:text-neutral-500 mt-1 uppercase tracking-wider font-semibold">
-                  Монгол Хэлний Бичгийн Хурдны Тэмцээн
-                </p>
+
+              {/* Navigation Tabs for Tablet & Desktop */}
+              <div className="hidden md:flex items-center gap-1 bg-slate-100/80 dark:bg-neutral-900/60 p-1 rounded-xl">
+                <span className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-neutral-800 text-slate-900 dark:text-white shadow-sm select-none">
+                  ⌨️ Typeracer
+                </span>
+                <a
+                  href="https://tulgat.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  💼 Портфолио
+                </a>
               </div>
             </div>
 
-            {/* Utility Settings */}
-            <div className="flex items-center gap-2">
-              {/* Sound Toggle */}
-              <button
-                onClick={() => setSoundEnabled(!soundEnabled)}
-                className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-neutral-900 text-slate-500 dark:text-neutral-400 transition-colors cursor-pointer"
-                title={soundEnabled ? 'Дуу хаах' : 'Дуу нээх'}
-              >
-                {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-              </button>
+            {/* Mobile Navigation Tabs & Controls */}
+            <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+              {/* Tabs for Mobile */}
+              <div className="flex items-center gap-1 bg-slate-100/80 dark:bg-neutral-900/60 p-1 rounded-xl md:hidden w-full sm:w-auto">
+                <span className="flex-1 sm:flex-initial text-center px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-neutral-800 text-slate-900 dark:text-white shadow-sm select-none">
+                  ⌨️ Typeracer
+                </span>
+                <a
+                  href="https://tulgat.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 sm:flex-initial text-center px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white transition-all flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  💼 Портфолио
+                </a>
+              </div>
 
-              {/* Theme Toggle */}
-              <button
-                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-neutral-900 text-slate-500 dark:text-neutral-400 transition-colors cursor-pointer"
-                title={theme === 'light' ? 'Харанхуй горим' : 'Гэрэлт горим'}
-              >
-                {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-              </button>
+              {/* Utility Controls */}
+              <div className="flex items-center gap-2">
+                {/* Sound Toggle */}
+                <button
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-neutral-900 text-slate-500 dark:text-neutral-400 transition-colors cursor-pointer"
+                  title={soundEnabled ? 'Дуу хаах' : 'Дуу нээх'}
+                >
+                  {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                </button>
+
+                {/* Theme Toggle */}
+                <button
+                  onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                  className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-neutral-900 text-slate-500 dark:text-neutral-400 transition-colors cursor-pointer"
+                  title={theme === 'light' ? 'Харанхуй горим' : 'Гэрэлт горим'}
+                >
+                  {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
           </div>
         </header>
