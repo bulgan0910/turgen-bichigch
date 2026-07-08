@@ -13,7 +13,8 @@ import {
   Sparkles, 
   Award,
   BookOpen,
-  Globe
+  Globe,
+  Timer
 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -74,8 +75,40 @@ export default function App() {
   const [leaderboardScores, setLeaderboardScores] = useState<ScoreEntry[]>([]);
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState<boolean>(false);
 
+  // Text Length and Time Limit States
+  const [textLength, setTextLength] = useState<'short' | 'medium' | 'long'>(() => {
+    const saved = localStorage.getItem('typeracer_text_length');
+    if (saved === 'short' || saved === 'medium' || saved === 'long') return saved;
+    return 'short';
+  });
+  const [timeLimit, setTimeLimit] = useState<number | null>(() => {
+    const saved = localStorage.getItem('typeracer_time_limit');
+    if (saved === 'none') return null;
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed)) return parsed;
+    }
+    return null;
+  });
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
   // Refs
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputValueRef = useRef<string>('');
+  const errorCountRef = useRef<number>(0);
+  const currentSentenceRef = useRef<Sentence>(currentSentence);
+
+  useEffect(() => {
+    inputValueRef.current = inputValue;
+  }, [inputValue]);
+
+  useEffect(() => {
+    errorCountRef.current = errorCount;
+  }, [errorCount]);
+
+  useEffect(() => {
+    currentSentenceRef.current = currentSentence;
+  }, [currentSentence]);
 
   // Synchronize Theme Class
   useEffect(() => {
@@ -91,6 +124,16 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('typeracer_language', selectedLanguage);
   }, [selectedLanguage]);
+
+  // Synchronize Text Length to Storage
+  useEffect(() => {
+    localStorage.setItem('typeracer_text_length', textLength);
+  }, [textLength]);
+
+  // Synchronize Time Limit to Storage
+  useEffect(() => {
+    localStorage.setItem('typeracer_time_limit', timeLimit === null ? 'none' : timeLimit.toString());
+  }, [timeLimit]);
 
   // Load Leaderboard on mount and start screen
   const loadLeaderboard = async () => {
@@ -155,21 +198,49 @@ export default function App() {
     }
   }, [gameState, soundEnabled]);
 
+  // Helper to count correctly typed prefix characters
+  const getCorrectCharCount = (typed: string, target: string) => {
+    let correctIndex = 0;
+    for (let i = 0; i < typed.length; i++) {
+      if (typed[i] === target[i]) {
+        correctIndex++;
+      } else {
+        break;
+      }
+    }
+    return correctIndex;
+  };
+
+  // Timer countdown effect for PLAYING state
+  useEffect(() => {
+    if (gameState !== 'PLAYING' || !startTime || timeLimit === null) {
+      setTimeLeft(null);
+      return;
+    }
+
+    setTimeLeft(timeLimit);
+
+    const interval = setInterval(() => {
+      const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, timeLimit - elapsedSec);
+      setTimeLeft(remaining);
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+        // Time is up! Trigger finish using ref-safe values
+        handleFinishGame(inputValueRef.current, errorCountRef.current);
+      }
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, [gameState, startTime, timeLimit]);
+
   // Live statistics calculation
   useEffect(() => {
     if (gameState !== 'PLAYING' || !startTime) return;
 
     const interval = setInterval(() => {
-      // Find matching correct characters length
-      let correctIndex = 0;
-      for (let i = 0; i < inputValue.length; i++) {
-        if (inputValue[i] === currentSentence.text[i]) {
-          correctIndex++;
-        } else {
-          break;
-        }
-      }
-
+      const correctIndex = getCorrectCharCount(inputValueRef.current, currentSentenceRef.current.text);
       const elapsedMin = (Date.now() - startTime) / 60000;
       if (elapsedMin > 0) {
         const w = correctIndex / 5;
@@ -178,7 +249,7 @@ export default function App() {
     }, 250);
 
     return () => clearInterval(interval);
-  }, [gameState, startTime, inputValue, currentSentence]);
+  }, [gameState, startTime]);
 
   // Handle Input typing changes
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -202,19 +273,22 @@ export default function App() {
 
     // Check if entire sentence is completed correctly
     if (val === targetText) {
-      handleFinishGame();
+      handleFinishGame(val, errorCount);
     }
   };
 
-  const handleFinishGame = () => {
+  const handleFinishGame = (finalInputVal = inputValueRef.current, finalErrors = errorCountRef.current) => {
     if (!startTime) return;
     const elapsedMs = Date.now() - startTime;
     const elapsedMin = elapsedMs / 60000;
-    const words = currentSentence.text.length / 5;
-    const finalCalculatedWpm = Math.max(5, Math.round(words / elapsedMin));
+    
+    // Calculate WPM based on correct prefix length
+    const correctIndex = getCorrectCharCount(finalInputVal, currentSentenceRef.current.text);
+    const words = correctIndex / 5;
+    const finalCalculatedWpm = Math.max(5, Math.round(words / (elapsedMin || 0.01)));
 
     setFinalWpm(finalCalculatedWpm);
-    setFinalErrorCount(errorCount);
+    setFinalErrorCount(finalErrors);
     setGameState('FINISHED');
     setScoreSaved(false);
     playSound('finish', soundEnabled);
@@ -225,7 +299,7 @@ export default function App() {
 
     // Auto save if user entered a name
     if (playerName.trim()) {
-      saveScoreDirectly(playerName.trim(), finalCalculatedWpm, errorCount);
+      saveScoreDirectly(playerName.trim(), finalCalculatedWpm, finalErrors);
     }
   };
 
@@ -255,7 +329,7 @@ export default function App() {
     saveScoreDirectly(playerName.trim(), finalWpm, finalErrorCount);
   };
 
-  // Trigger game start countdown
+  // Trigger game start countdown with dynamic lengths (combinations of sentences)
   const startRace = () => {
     if (!playerName.trim()) return;
 
@@ -263,9 +337,42 @@ export default function App() {
     const filtered = SENTENCES.filter(
       (s) => (difficulty === 'all' || s.difficulty === difficulty) && s.language === selectedLanguage
     );
-    // Select a random sentence
-    const randomIndex = Math.floor(Math.random() * filtered.length);
-    setCurrentSentence(filtered[randomIndex] || SENTENCES.find(s => s.language === selectedLanguage) || SENTENCES[0]);
+
+    if (filtered.length === 0) {
+      setCurrentSentence(SENTENCES[0]);
+    } else {
+      let combinedText = '';
+      let sentenceAuthor = 'Хамтарсан өгүүлбэр';
+
+      if (textLength === 'short') {
+        const randomIndex = Math.floor(Math.random() * filtered.length);
+        const sentence = filtered[randomIndex];
+        combinedText = sentence.text;
+        sentenceAuthor = sentence.author || 'Үл мэдэгдэх';
+      } else {
+        const count = textLength === 'long' ? 5 : 3;
+        const shuffled = [...filtered].sort(() => 0.5 - Math.random());
+        const picked = shuffled.slice(0, Math.min(count, shuffled.length));
+
+        // Fill if there are fewer sentences in the database than requested count
+        while (picked.length < count && filtered.length > 0) {
+          picked.push(filtered[Math.floor(Math.random() * filtered.length)]);
+        }
+
+        combinedText = picked.map((p) => p.text).join(' ');
+        sentenceAuthor = 'Хамтарсан зохиол';
+      }
+
+      const syntheticSentence: Sentence = {
+        id: `synthetic_${Date.now()}`,
+        text: combinedText,
+        difficulty: difficulty === 'all' ? 'medium' : difficulty,
+        language: selectedLanguage,
+        author: sentenceAuthor,
+      };
+
+      setCurrentSentence(syntheticSentence);
+    }
 
     // Save settings
     localStorage.setItem('typeracer_name', playerName);
@@ -338,7 +445,7 @@ export default function App() {
               {/* Navigation Tabs for Tablet & Desktop */}
               <div className="hidden md:flex items-center gap-1 bg-slate-100/80 dark:bg-neutral-900/60 p-1 rounded-xl">
                 <span className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-neutral-800 text-slate-900 dark:text-white shadow-sm select-none">
-                  💼 Портфолио
+                  ⌨️ Typeracer
                 </span>
                 <a
                   href="https://tulgat.vercel.app/"
@@ -346,7 +453,7 @@ export default function App() {
                   rel="noopener noreferrer"
                   className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white transition-all flex items-center gap-1 cursor-pointer"
                 >
-                  ⌨️ Typeracer
+                  💼 Портфолио
                 </a>
               </div>
             </div>
@@ -356,7 +463,7 @@ export default function App() {
               {/* Tabs for Mobile */}
               <div className="flex items-center gap-1 bg-slate-100/80 dark:bg-neutral-900/60 p-1 rounded-xl md:hidden w-full sm:w-auto">
                 <span className="flex-1 sm:flex-initial text-center px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-neutral-800 text-slate-900 dark:text-white shadow-sm select-none">
-                  💼 Портфолио
+                  ⌨️ Typeracer
                 </span>
                 <a
                   href="https://tulgat.vercel.app/"
@@ -364,7 +471,7 @@ export default function App() {
                   rel="noopener noreferrer"
                   className="flex-1 sm:flex-initial text-center px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white transition-all flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  ⌨️ Typeracer
+                  💼 Портфолио
                 </a>
               </div>
 
@@ -543,6 +650,77 @@ export default function App() {
                       </div>
                     </div>
 
+                    {/* Text Length Selection */}
+                    <div className="space-y-3">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-neutral-500 flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5" />
+                        Текстийн урт (Урт үг/өгүүлбэр)
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
+                        <button
+                          onClick={() => setTextLength('short')}
+                          className={`border rounded-2xl p-3 flex flex-col items-center justify-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
+                            textLength === 'short'
+                              ? 'border-indigo-500 bg-indigo-500/5 ring-2 ring-indigo-500/15 dark:border-emerald-500 dark:bg-emerald-500/5 dark:ring-emerald-500/15 text-indigo-600 dark:text-emerald-400'
+                              : 'border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-950/20 hover:bg-slate-100 dark:hover:bg-neutral-900 text-slate-600 dark:text-slate-300'
+                          }`}
+                        >
+                          <span>Богино 📝</span>
+                          <span className="text-[10px] font-medium text-slate-400 dark:text-neutral-500 mt-1">1 өгүүлбэр</span>
+                        </button>
+                        <button
+                          onClick={() => setTextLength('medium')}
+                          className={`border rounded-2xl p-3 flex flex-col items-center justify-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
+                            textLength === 'medium'
+                              ? 'border-indigo-500 bg-indigo-500/5 ring-2 ring-indigo-500/15 dark:border-emerald-500 dark:bg-emerald-500/5 dark:ring-emerald-500/15 text-indigo-600 dark:text-emerald-400'
+                              : 'border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-950/20 hover:bg-slate-100 dark:hover:bg-neutral-900 text-slate-600 dark:text-slate-300'
+                          }`}
+                        >
+                          <span>Дундаж 📚</span>
+                          <span className="text-[10px] font-medium text-slate-400 dark:text-neutral-500 mt-1">3 өгүүлбэр</span>
+                        </button>
+                        <button
+                          onClick={() => setTextLength('long')}
+                          className={`border rounded-2xl p-3 flex flex-col items-center justify-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
+                            textLength === 'long'
+                              ? 'border-indigo-500 bg-indigo-500/5 ring-2 ring-indigo-500/15 dark:border-emerald-500 dark:bg-emerald-500/5 dark:ring-emerald-500/15 text-indigo-600 dark:text-emerald-400'
+                              : 'border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-950/20 hover:bg-slate-100 dark:hover:bg-neutral-900 text-slate-600 dark:text-slate-300'
+                          }`}
+                        >
+                          <span>Урт 📖</span>
+                          <span className="text-[10px] font-medium text-slate-400 dark:text-neutral-500 mt-1">5 өгүүлбэр</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Time Limit Selection */}
+                    <div className="space-y-3">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-neutral-500 flex items-center gap-1.5">
+                        <Timer className="w-3.5 h-3.5" />
+                        Хугацааны хязгаар (Секунд)
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { label: 'Үгүй ♾️', value: null },
+                          { label: '15с ⚡', value: 15 },
+                          { label: '30с ⏱️', value: 30 },
+                          { label: '60с ⏰', value: 60 }
+                        ].map((opt) => (
+                          <button
+                            key={opt.label}
+                            onClick={() => setTimeLimit(opt.value)}
+                            className={`border rounded-xl p-2.5 flex flex-col items-center justify-center transition-all cursor-pointer font-bold text-xs sm:text-sm ${
+                              timeLimit === opt.value
+                                ? 'border-indigo-500 bg-indigo-500/5 ring-2 ring-indigo-500/15 dark:border-emerald-500 dark:bg-emerald-500/5 dark:ring-emerald-500/15 text-indigo-600 dark:text-emerald-400'
+                                : 'border-slate-200 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-950/20 hover:bg-slate-100 dark:hover:bg-neutral-900 text-slate-600 dark:text-slate-300'
+                            }`}
+                          >
+                            <span>{opt.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Start Button */}
                     <button
                       onClick={startRace}
@@ -609,7 +787,7 @@ export default function App() {
                 <Track avatar={selectedAvatar} progress={currentProgress} />
 
                 {/* Typing stats header */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-white dark:bg-neutral-900 border border-slate-200/80 dark:border-neutral-800 rounded-2xl p-4 text-center">
                     <div className="text-2xl sm:text-3xl font-display font-black text-indigo-600 dark:text-emerald-400 font-mono">
                       {liveWpm}
@@ -636,6 +814,18 @@ export default function App() {
                     </div>
                     <div className="text-[10px] sm:text-xs text-slate-400 dark:text-neutral-500 mt-1 uppercase font-semibold tracking-wider">
                       Урагшилсан
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-neutral-900 border border-slate-200/80 dark:border-neutral-800 rounded-2xl p-4 text-center">
+                    <div className={`text-2xl sm:text-3xl font-display font-black font-mono transition-colors ${
+                      timeLeft !== null && timeLeft <= 5 ? 'text-rose-500 animate-pulse' : 'text-slate-700 dark:text-neutral-300'
+                    }`}>
+                      {timeLeft !== null ? `${timeLeft}с` : '∞'}
+                    </div>
+                    <div className="text-[10px] sm:text-xs text-slate-400 dark:text-neutral-500 mt-1 uppercase font-semibold tracking-wider flex items-center justify-center gap-1">
+                      <Timer className="w-3.5 h-3.5" />
+                      Хугацаа
                     </div>
                   </div>
                 </div>
